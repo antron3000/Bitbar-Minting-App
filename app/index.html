@@ -1,56 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitbar Minting App</title>
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-        .svg-container {
-            border: 2px solid #333;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .header {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-        }
-        .mint-button{
-            margin-top: 10px;
-            padding: 10px;
-            cursor: pointer;
-            background-color: #333;
-            color: white;
-            border: none;
-            font-size: 16px;
-        }
-       
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitbar Minting App</title>
+<style>
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+.svg-container {
+  border: 2px solid #333;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.mint-button {
+  margin-top: 10px;
+  padding: 10px;
+  cursor: pointer;
+  background-color: #333;
+  color: white;
+  border: none;
+  font-size: 16px;
+}
+.mint-button:hover {
+  background-color: #555;
+}
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  justify-content: center;
+  align-items: center;
+}
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  position: relative;
+  width: 300px;
+}
+.qr-code {
+  width: 200px;
+  height: 200px;
+  margin: 10px auto;
+}
+.close-modal {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+</style>
 </head>
 <body>
-
-<div class="header">
-    <button class="connect-wallet">Connect to Wallet</button>
-    <div class="wallet-info"></div>
-</div>
-
 <div class="svg-container">
-    <img src="1kB.svg" alt="Bitbar SVG" width="300px">
+  <img src="1kB.svg" alt="Bitbar SVG" width="300px">
 </div>
-
 <button class="mint-button">Mint Bitbar</button>
 
+<div class="modal" id="paymentModal">
+  <div class="modal-content">
+    <button class="close-modal" id="closeModal">&times;</button>
+    <h2>Payment Details</h2>
+    <p>Send <strong>0.001 BTC</strong> to the following address:</p>
+    <img class="qr-code" src="http://localhost:3000/qrcode" alt="QR Code">
+    <p><strong id="btcAddress">bc1pte4f7x5e5xpr6u2y3rr9mfynw989u9g8zlp7hg0pgc89n5tt3r7qevnwpr</strong></p>
+  </div>
+</div>
 
 <script>
-    
-</script>
+document.querySelector('.mint-button').addEventListener('click', () => {
+  // Refresh QR code when modal opens
+  document.querySelector('.qr-code').src = 'http://localhost:3000/qrcode?' + new Date().getTime();
+  document.getElementById('paymentModal').style.display = 'flex';
+});
 
+document.getElementById('closeModal').addEventListener('click', () => {
+  document.getElementById('paymentModal').style.display = 'none';
+});
+
+window.addEventListener('click', (event) => {
+  if (event.target === document.getElementById('paymentModal')) {
+    document.getElementById('paymentModal').style.display = 'none';
+  }
+});
+</script>
 </body>
 </html>
