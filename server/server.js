@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const qrcode = require('qrcode'); // Import qrcode package
 
 const app = express();
 const PORT = 3000;
@@ -61,6 +62,16 @@ app.get('/', (req, res) => {
         Array.from(processedTransactionIds).join('<br>') ||
         'None yet'
     );
+});
+
+// Express route to generate and display the QR code for the Bitcoin address
+app.get('/qrcode', async (req, res) => {
+    try {
+        const qrCodeDataUrl = await qrcode.toDataURL(bitcoinAddress);
+        res.send(`<img src="${qrCodeDataUrl}" alt="QR Code for Bitcoin Address">`);
+    } catch (error) {
+        res.status(500).send('Error generating QR code');
+    }
 });
 
 app.listen(PORT, () => {
