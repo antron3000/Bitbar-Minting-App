@@ -67,8 +67,9 @@ app.get('/', (req, res) => {
 // Express route to generate and display the QR code for the Bitcoin address
 app.get('/qrcode', async (req, res) => {
     try {
-        const qrCodeDataUrl = await qrcode.toDataURL(bitcoinAddress);
-        res.send(`<img src="${qrCodeDataUrl}" alt="QR Code for Bitcoin Address">`);
+        const qrCodeBuffer = await qrcode.toBuffer(bitcoinAddress);
+        res.type('png');
+        res.send(qrCodeBuffer);
     } catch (error) {
         res.status(500).send('Error generating QR code');
     }
