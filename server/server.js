@@ -258,22 +258,8 @@ app.post('/api/confirm-mint', async (req, res) => {
 
 app.get('/qrcode', async (req, res) => {
   try {
-    // Set proper headers for image content
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
-    
-    // Generate QR code with better options
-    const qrOptions = {
-      width: 300,
-      margin: 2,
-      color: {
-        dark: '#000000',
-        light: '#ffffff'
-      }
-    };
-    
-    // Generate and send the QR code buffer
-    const qrCodeBuffer = await qrcode.toBuffer(config.bitcoinAddress, qrOptions);
+    const qrCodeBuffer = await qrcode.toBuffer(config.bitcoinAddress);
+    res.type('png');
     res.send(qrCodeBuffer);
   } catch (error) {
     console.error('Error generating QR code:', error);
