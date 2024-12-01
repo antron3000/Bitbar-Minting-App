@@ -22,5 +22,11 @@
     "inscriptionId": "084b6094226373a88778d12b0c3bea4da3cc309ca2a377b76abb385ec862cc28i0",
     "timestamp": "2024-11-30T17:32:28.160Z",
     "destination": "bc1p3wrhf9qjustckfhkfs5g373ux06ydlet0vyuvd9rjpshxwvu5p6sulqxdd"
+  },
+  {
+    "txid": "640969d1022610be68d3746c4e81caf9b5d25bb68d60ede639d88b664f8996bd",
+    "inscriptionId": "48de0751d10619c7cd2af99ed25d106be10b777ccab1c068bf07bcf54d975740i0",
+    "timestamp": "2024-11-30T17:53:55.390Z",
+    "destination": "bc1p54fppwu5uql9mxfy405dz6700c3u864gg6y8w87q7f352lcla9aqss6jac"
   }
 ]
