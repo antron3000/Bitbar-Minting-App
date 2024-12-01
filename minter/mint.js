@@ -24,7 +24,7 @@ if (!fs.existsSync(filePath)) {
 
 // Configuration
 const config = {
-  monitorUrl: 'http://localhost:3000',
+  monitorUrl: 'http://170.75.164.200:3000',
   checkInterval: 30000,
   mintCommandTemplate: `ord wallet --name {wallet} inscribe --file {file} --fee-rate 3 --postage "546 sats" --destination {destination}`,
   maxRetries: 3,

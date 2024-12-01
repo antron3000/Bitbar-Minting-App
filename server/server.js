@@ -258,9 +258,56 @@ app.post('/api/confirm-mint', async (req, res) => {
 
 app.get('/qrcode', async (req, res) => {
   try {
-    const qrCodeBuffer = await qrcode.toBuffer(config.bitcoinAddress);
-    res.type('png');
-    res.send(qrCodeBuffer);
+    // Generate QR code as data URL instead of buffer
+    const qrDataUrl = await qrcode.toDataURL(config.bitcoinAddress, {
+      width: 300,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    });
+
+    // Send an HTML page with the QR code embedded
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Bitcoin Address QR Code</title>
+          <style>
+            body {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              font-family: Arial, sans-serif;
+              margin: 20px;
+            }
+            img {
+              max-width: 300px;
+              margin: 20px 0;
+            }
+            .address {
+              word-break: break-all;
+              max-width: 400px;
+              text-align: center;
+              margin: 20px 0;
+              padding: 10px;
+              background: #f5f5f5;
+              border-radius: 4px;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Bitcoin Address QR Code</h1>
+          <img src="${qrDataUrl}" alt="Bitcoin Address QR Code">
+          <div class="address">
+            <strong>Address:</strong><br>
+            ${config.bitcoinAddress}
+          </div>
+        </body>
+      </html>
+    `);
   } catch (error) {
     console.error('Error generating QR code:', error);
     res.status(500).send('Error generating QR code');
@@ -328,7 +375,7 @@ process.on('uncaughtException', (error) => {
   console.error('Uncaught exception:', error);
 });
 
-process.on('unhandledRejection', (error) => {
+process.on( 'unhandledRejection', (error) => {
   console.error('Unhandled rejection:', error);
 });
 
