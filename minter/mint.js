@@ -24,236 +24,124 @@ if (!fs.existsSync(filePath)) {
 
 // Configuration
 const config = {
-  monitorUrl: 'http://170.75.164.200:3000',
+  monitorUrl: process.env.SERVER_URL || 'http://170.75.164.200:3000', // Updated to use "server" as default
   checkInterval: 30000,
   mintCommandTemplate: `ord wallet --name {wallet} inscribe --file {file} --fee-rate 3 --postage "546 sats" --destination {destination}`,
   maxRetries: 3,
   retryDelay: 5000,
-  minConfirmations: 1,
-  logFile: 'minting-service.log',
-  mintsFile: 'mints.json',
-  walletName: walletName,
-  filePath: filePath
 };
 
-// Tracking minting attempts and current operations
-const mintingAttempts = new Map();
-const activeOperations = new Set();
+async function checkPendingMints() {
+  let retries = 0;
+  while (retries < config.maxRetries) {
+    try {
+      const response = await axios.get(`${config.monitorUrl}/api/pending-mints`, { timeout: 5000 });
+      console.log('Connected to monitor server and checked for pending mints.');
+      const pendingMints = response.data;
 
-async function initMintsFile() {
-  try {
-    if (!fs.existsSync(config.mintsFile)) {
-      await fsPromises.writeFile(config.mintsFile, JSON.stringify([], null, 2));
+      if (pendingMints.length > 0) {
+        console.log(`${pendingMints.length} transactions require minting.`);
+        for (const mint of pendingMints) {
+          await processMint(mint);
+        }
+      } else {
+        console.log('No pending mints found.');
+      }
+      break; // Exit the loop if the request is successful
+    } catch (error) {
+      if (error.code === 'ECONNABORTED') {
+        console.error('Error in monitoring process: AxiosError: timeout of 5000ms exceeded');
+      } else if (error.response && error.response.status === 404) {
+        console.error('Error in monitoring process: Request failed with status code 404');
+      } else {
+        console.error('Error in monitoring process:', error.message);
+      }
+      retries++;
+      if (retries < config.maxRetries) {
+        console.log(`Retrying in ${config.retryDelay / 1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, config.retryDelay));
+      } else {
+        console.error('Max retries reached. Exiting monitoring process.');
+      }
     }
-  } catch (error) {
-    console.error('Error initializing mints file:', error);
-    process.exit(1);
   }
 }
 
-async function readMints() {
-  try {
-    const data = await fsPromises.readFile(config.mintsFile, 'utf8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('Error reading mints file:', error);
-    return [];
-  }
-}
+async function processMint(mint) {
+  console.log(`Processing mint for transaction ${mint.txid}...`);
+  const destination = mint.sender_address;
+  const mintCommand = config.mintCommandTemplate
+    .replace('{wallet}', walletName)
+    .replace('{file}', filePath)
+    .replace('{destination}', destination);
 
-async function saveMint(mintData) {
   try {
-    const mints = await readMints();
-    mints.push(mintData);
-    await fsPromises.writeFile(config.mintsFile, JSON.stringify(mints, null, 2));
-  } catch (error) {
-    console.error('Error saving mint:', error);
-  }
-}
+    const { stdout, stderr } = await execAsync(mintCommand);
+    if (stdout) console.log(`Mint successful for ${mint.txid}: ${stdout}`);
+    if (stderr) console.error(`Mint warnings/errors for ${mint.txid}: ${stderr}`);
 
-async function logToFile(message) {
-  const timestamp = new Date().toISOString();
-  const logMessage = `${timestamp} - ${message}\n`;
-  console.log(message);
-  
-  try {
-    await fsPromises.appendFile(config.logFile, logMessage);
+    // Log success to the monitor server
+    await axios.post(`${config.monitorUrl}/api/confirm-mint`, {
+      txid: mint.txid,
+      inscription_id: parseInscriptionId(stdout),
+    });
+
+    console.log(`Mint confirmed for ${mint.txid}.`);
   } catch (error) {
-    console.error('Error writing to log file:', error);
+    console.error(`Error minting transaction ${mint.txid}:`, error.message);
   }
 }
 
 function parseInscriptionId(output) {
-  try {
-    const data = JSON.parse(output);
-    if (data.inscriptions && data.inscriptions[0]) {
-      return data.inscriptions[0].id;
-    }
-  } catch (error) {
-    console.error('Error parsing inscription ID:', error);
-  }
-  return null;
+  // Extract the inscription ID from the command output
+  const match = output.match(/inscription_id: (\S+)/);
+  return match ? match[1] : null;
 }
 
-async function executeMintCommand(senderAddress, txid) {
+console.log('Starting bitbar minting service...');
+console.log(`Using wallet: ${walletName}`);
+console.log(`Using file: ${filePath}`);
+console.log(`Monitoring ${config.monitorUrl} for pending mints`);
+
+checkPendingMints();
+
+async function initMintsFile() {
+  const mintsFilePath = path.join(__dirname, 'mints.json');
   try {
-    if (!senderAddress) {
-      throw new Error('No sender address provided for minting');
-    }
-
-    const logId = `${txid.substr(0, 8)}...${txid.substr(-8)}`;
-    const mintCommand = config.mintCommandTemplate
-      .replace('{wallet}', config.walletName)
-      .replace('{file}', config.filePath)
-      .replace('{destination}', senderAddress);
-    
-    await logToFile(`[${logId}] Executing mint command for ${senderAddress}`);
-    await logToFile(`[${logId}] Command: ${mintCommand}`);
-    
-    const { stdout, stderr } = await execAsync(mintCommand);
-    
-    if (stdout) {
-      await logToFile(`[${logId}] Mint output: ${stdout}`);
-      
-      const inscriptionId = parseInscriptionId(stdout);
-      if (inscriptionId) {
-        await saveMint({
-          txid,
-          inscriptionId,
-          timestamp: new Date().toISOString(),
-          destination: senderAddress
-        });
-        await logToFile(`[${logId}] Saved inscription ID: ${inscriptionId}`);
-        return { success: true, inscriptionId };
-      } else {
-        await logToFile(`[${logId}] Warning: Could not parse inscription ID from output`);
-      }
-    }
-    
-    if (stderr) {
-      await logToFile(`[${logId}] Mint stderr: ${stderr}`);
-      if (stderr.includes('insufficient funds') || 
-          stderr.includes('error') || 
-          stderr.includes('failed')) {
-        throw new Error(`Mint command failed: ${stderr}`);
-      }
-    }
-
-    return { success: false };
+    await fsPromises.access(mintsFilePath);
   } catch (error) {
-    await logToFile(`Error executing mint command: ${error.message}`);
-    return { success: false };
+    await fsPromises.writeFile(mintsFilePath, JSON.stringify([]));
   }
 }
 
-async function confirmMint(txid, inscriptionId) {
-  try {
-    await axios.post(`${config.monitorUrl}/api/confirm-mint`, { 
-      txid,
-      inscription_id: inscriptionId 
-    });
-    await logToFile(`Successfully confirmed mint for transaction ${txid}`);
-    return true;
-  } catch (error) {
-    await logToFile(`Error confirming mint for transaction ${txid}: ${error.message}`);
-    return false;
-  }
+async function logToFile(message) {
+  const logFilePath = path.join(__dirname, 'minting.log');
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] ${message}\n`;
+  await fsPromises.appendFile(logFilePath, logMessage);
 }
 
-async function processPendingMint(tx) {
-  const attempts = mintingAttempts.get(tx.txid) || 0;
-  
-  if (attempts >= config.maxRetries) {
-    await logToFile(`Max retries reached for transaction ${tx.txid}`);
-    return;
-  }
-
-  if (activeOperations.has(tx.txid)) {
-    await logToFile(`Mint operation already in progress for ${tx.txid}`);
-    return;
-  }
-
-  activeOperations.add(tx.txid);
-
-  try {
-    await logToFile(`Processing mint for transaction ${tx.txid} (attempt ${attempts + 1}/${config.maxRetries})`);
-    
-    if (!tx.sender_address) {
-      await logToFile(`No sender address found for transaction ${tx.txid}, skipping`);
-      mintingAttempts.set(tx.txid, config.maxRetries);
-      return;
-    }
-
-    const mintResult = await executeMintCommand(tx.sender_address, tx.txid);
-    
-    if (mintResult.success && mintResult.inscriptionId) {
-      const confirmSuccess = await confirmMint(tx.txid, mintResult.inscriptionId);
-      
-      if (confirmSuccess) {
-        mintingAttempts.delete(tx.txid);
-        await logToFile(`Successfully minted bitbar for transaction ${tx.txid} to ${tx.sender_address}`);
-        return;
-      }
-    }
-    
-    mintingAttempts.set(tx.txid, attempts + 1);
-    await logToFile(`Will retry transaction ${tx.txid} later (attempt ${attempts + 1})`);
-    
-  } catch (error) {
-    await logToFile(`Error processing mint for transaction ${tx.txid}: ${error.message}`);
-    mintingAttempts.set(tx.txid, attempts + 1);
-  } finally {
-    activeOperations.delete(tx.txid);
-  }
+async function readMints() {
+  const mintsFilePath = path.join(__dirname, 'mints.json');
+  const mintsData = await fsPromises.readFile(mintsFilePath, 'utf8');
+  return JSON.parse(mintsData);
 }
 
-async function checkPendingMints() {
-  try {
-    await logToFile('Checking for pending mints...');
-    const response = await axios.get(`${config.monitorUrl}/api/pending-mints`);
-    const pendingMints = response.data;
-
-    if (pendingMints.length === 0) {
-      await logToFile('No pending mints found');
-      return;
-    }
-
-    await logToFile(`Found ${pendingMints.length} pending mints`);
-    
-    for (const tx of pendingMints) {
-      if (activeOperations.has(tx.txid)) {
-        continue;
-      }
-      
-      await processPendingMint(tx);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-  } catch (error) {
-    if (error.code === 'ECONNREFUSED') {
-      await logToFile('Could not connect to monitor server. Is it running?');
-    } else {
-      await logToFile(`Error checking pending mints: ${error.message}`);
-    }
-  }
+async function writeMints(mints) {
+  const mintsFilePath = path.join(__dirname, 'mints.json');
+  await fsPromises.writeFile(mintsFilePath, JSON.stringify(mints, null, 2));
 }
 
 async function getServiceStatus() {
   const status = {
     uptime: process.uptime(),
-    activeOperations: Array.from(activeOperations),
-    pendingRetries: Array.from(mintingAttempts.entries()).map(([txid, attempts]) => ({
-      txid,
-      attempts,
-      maxRetries: config.maxRetries
-    })),
     totalMints: (await readMints()).length,
     config: {
-      walletName: config.walletName,
-      filePath: config.filePath,
+      walletName,
+      filePath,
       monitorUrl: config.monitorUrl,
-      checkInterval: config.checkInterval
-    }
+      checkInterval: config.checkInterval,
+    },
   };
   return status;
 }
@@ -261,53 +149,9 @@ async function getServiceStatus() {
 async function startMintingService() {
   await initMintsFile();
   await logToFile('Starting bitbar minting service...');
-  await logToFile(`Using wallet: ${config.walletName}`);
-  await logToFile(`Using file: ${config.filePath}`);
+  await logToFile(`Using wallet: ${walletName}`);
+  await logToFile(`Using file: ${filePath}`);
   await logToFile(`Monitoring ${config.monitorUrl} for pending mints`);
-  
-  const http = require('http');
-  const statusServer = http.createServer(async (req, res) => {
-    if (req.url === '/status') {
-      const status = await getServiceStatus();
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(status, null, 2));
-    } else if (req.url === '/mints') {
-      const mints = await readMints();
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(mints, null, 2));
-    } else {
-      res.writeHead(404);
-      res.end();
-    }
-  });
-
-  statusServer.listen(3001, () => {
-    logToFile('Status endpoint available at http://localhost:3001/status');
-    logToFile('Mints endpoint available at http://localhost:3001/mints');
-  });
-
-  while (true) {
-    await checkPendingMints();
-    await new Promise(resolve => setTimeout(resolve, config.checkInterval));
-  }
 }
 
-process.on('SIGINT', async () => {
-  await logToFile('Shutting down minting service...');
-  process.exit(0);
-});
-
-process.on('uncaughtException', async (error) => {
-  await logToFile(`Uncaught exception: ${error.message}`);
-  await logToFile(error.stack);
-});
-
-process.on('unhandledRejection', async (error) => {
-  await logToFile(`Unhandled rejection: ${error.message}`);
-  await logToFile(error.stack);
-});
-
-startMintingService().catch(async error => {
-  await logToFile(`Fatal error: ${error.message}`);
-  process.exit(1);
-});
+startMintingService();

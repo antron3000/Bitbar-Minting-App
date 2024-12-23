@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./server
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+    depends_on:
+      - db
+
+  # minter:
+  #   build:
+  #     context: ./minter
+  #   ports:
+  #     - "3001:3001"
+  #   environment:
+  #     - PORT=3001
+  #     - SERVER_URL=http://server:3000
+  #   depends_on:
+  #     - server
+  #   command: ["node", "mint.js", "myWallet", "/usr/src/app/data/file.txt"]
+
+  db:
+    image: jitesoft/sqlite
+    platform: linux/amd64
+    volumes:
+      - ./server/transactions.db:/data/transactions.db
