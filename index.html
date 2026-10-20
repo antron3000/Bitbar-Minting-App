@@ -4,16 +4,53 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bitbar Minting App</title>
+<meta name="description" content="Bitbar Minting App: the 1 kB Bitbar, an inscription on Bitcoin of exactly 1,024 bytes. Minting is paused.">
+<link rel="canonical" href="https://mintbitbars.xyz/">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Bitbar Minting App">
+<meta property="og:description" content="Bitbar Minting App: the 1 kB Bitbar, an inscription on Bitcoin of exactly 1,024 bytes. Minting is paused.">
+<meta property="og:url" content="https://mintbitbars.xyz/">
+<meta property="og:image" content="https://mintbitbars.xyz/1kB.svg">
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "WebSite",
+ "@id": "https://mintbitbars.xyz/#site",
+ "name": "Bitbar Minting App",
+ "url": "https://mintbitbars.xyz/",
+ "description": "Bitbar Minting App: the 1 kB Bitbar, an inscription on Bitcoin of exactly 1,024 bytes. Minting is paused.",
+ "publisher": {
+  "@id": "https://blockspace.holdings/#org"
+ },
+ "about": {
+  "@type": "DefinedTerm",
+  "name": "Bitbar",
+  "url": "https://blockspace.wiki/glossary/bitbar/"
+ }
+}
+</script>
 <style>
 body {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: 100vh;
   margin: 0;
+  padding: 1rem;
+  box-sizing: border-box;
   font-family: Arial, sans-serif;
+  line-height: 1.5;
 }
+main { max-width: 34rem; text-align: center; }
+h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+.paused { border: 2px solid currentColor; padding: .75rem 1rem; margin: 1rem 0; text-align: left; }
+.mint-button[disabled] { cursor: not-allowed; opacity: .6; }
+.mints { font-size: .9rem; text-align: left; }
+.mints li { overflow-wrap: anywhere; }
+footer { margin-top: 1.5rem; font-size: .9rem; }
+footer a { margin: 0 .5rem; }
 .svg-container {
   border: 2px solid #333;
   padding: 20px;
@@ -71,54 +108,42 @@ body {
   font-size: 14px;
   margin-top: 10px;
 }
+@media (prefers-color-scheme: dark) {
+  body { background: #111; color: #eee; }
+  a { color: #8ab4ff; }
+  .svg-container { border-color: #ccc; background: #fff; }
+}
 </style>
 </head>
 <body>
+<main>
+<h1>Bitbar Minting App</h1>
+<p>A Bitbar is an inscription on Bitcoin whose size is its name. This one is exactly 1,024 bytes.</p>
 <div class="svg-container">
-  <img src="1kB.svg" alt="Bitbar SVG" width="300px">
+  <img src="1kB.svg" alt="The 1 kB Bitbar, an SVG of exactly 1,024 bytes" width="300">
 </div>
-
-
-<button class="mint-button">Mint Bitbar</button>
-
-<div class="modal" id="paymentModal">
-  <div class="modal-content">
-    <button class="close-modal" id="closeModal">&times;</button>
-    <h2>1</h2>
-    <strong>Make sure you are using an ordinals wallet. <a href="https://unisat.io/" >(Recommended - Unisat Wallet)</a></strong>
-
-    <h2>2</h2>
-
-    <div>
-    <p>Send <strong>0.00002 BTC</strong> to the following address:</p>
-    </div>
-    <div>    <img class="qr-code" src="http://170.75.164.200:3000/qrcode" alt="QR Code">
-    <strong id="btcAddress">bc1pte4f7x5e5xpr6u2y3rr9mfynw989u9g8zlp7hg0pgc89n5tt3r7qevnwpr</strong>
-    <br></br>
-    </div>  
-
-    <h2>3</h2>
-    <strong>Wait.</strong> <br></br>
-    <strong id="sendingAddress">Your Bitbar will be minted to the sending address</strong>
-    <p>Standard mint fee-rate: 3 sats/vb</p>
-
-  </div>
+<button class="mint-button" disabled>Mint Bitbar (paused)</button>
+<div class="paused" role="status">
+  <strong>Minting is paused.</strong> Do not send bitcoin to any address for a
+  Bitbar from this page; nothing would mint it.
 </div>
-
-<script>
-document.querySelector('.mint-button').addEventListener('click', () => {
-  document.getElementById('paymentModal').style.display = 'flex';
-});
-
-document.getElementById('closeModal').addEventListener('click', () => {
-  document.getElementById('paymentModal').style.display = 'none';
-});
-
-window.addEventListener('click', (event) => {
-  if (event.target === document.getElementById('paymentModal')) {
-    document.getElementById('paymentModal').style.display = 'none';
-  }
-});
-</script>
+<details class="mints">
+  <summary>7 Bitbars were minted here, in blocks 872,656 to 873,182 (2024-11-30 to 2024-12-04)</summary>
+  <ul>
+    <li><a href="https://blockspace.to/inscription/8fc8864b64d0133e9a9e5c1b267d5ee581703ebf6fb3e345691e139001d98c33i0">Inscription 78,595,962</a>, block 872,656</li>
+    <li><a href="https://blockspace.to/inscription/2fbf953f2f17e17c2a2d022ae29a5d5bb3d05ddab44caa80a8f283a208d21e3ai0">Inscription 78,595,983</a>, block 872,656</li>
+    <li><a href="https://blockspace.to/inscription/bc2525a04964c9c69097a4a8873a05059a3036899389989f00fa9876cac09e5ei0">Inscription 78,596,079</a>, block 872,656</li>
+    <li><a href="https://blockspace.to/inscription/084b6094226373a88778d12b0c3bea4da3cc309ca2a377b76abb385ec862cc28i0">Inscription 78,597,977</a>, block 872,657</li>
+    <li><a href="https://blockspace.to/inscription/48de0751d10619c7cd2af99ed25d106be10b777ccab1c068bf07bcf54d975740i0">Inscription 78,600,488</a>, block 872,659</li>
+    <li><a href="https://blockspace.to/inscription/995768a81ef21c0953305cae0c66a838b500f46701968a7885252cfbc60fc85fi0">Inscription 78,930,543</a>, block 873,182</li>
+    <li><a href="https://blockspace.to/inscription/1cd97ade63932c2977c9428993f125a2741c7f64db3da2bbea24d1a65e966f9bi0">Inscription 78,931,867</a>, block 873,182</li>
+  </ul>
+</details>
+<footer>
+  <a href="https://blockspace.holdings/">Part of Blockspace Holdings</a>
+  <a href="https://blockspace.wiki/projects/mintbitbars.xyz/">mintbitbars.xyz on the wiki</a>
+  <a href="https://blockspace.wiki/glossary/bitbar/">What is a Bitbar?</a>
+</footer>
+</main>
 </body>
 </html>
